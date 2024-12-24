@@ -16,7 +16,3 @@ mamba env create -f mamba_packages.yml
 ```
 I use Mamba since it's faster than using regular Conda but if you use Conda just replace `mamba` with `conda` in the above command.
 
-The only other file you need to install is `xlsx2csv` using `pip`:
-```
-pip install xlsx2csv
-```

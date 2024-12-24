@@ -1,0 +1,96 @@
+{
+    "marker_styles_dict": {
+        "comment0": "marker_pyplot, marker_plotly, marker color, face color",
+        "_comment1": "explicit phylogenetic methods are blues or greens",
+        "ale": {
+            "marker_pyplot": "P",
+            "marker_plotly": "cross",
+            "marker_color": "#4477AA",
+            "face_color": "#4477AA",
+            "label": "ALE",
+            "paradigm": "explicit"
+        },
+        "ranger": {
+            "marker_pyplot": "s",
+            "marker_plotly": "square",
+            "marker_color": "#228833",
+            "face_color": "white",
+            "label": "RANGER",
+            "paradigm": "explicit"
+        },
+        "ranger-fast": {
+            "marker_pyplot": "s",
+            "marker_plotly": "square",
+            "marker_color": "#000000",
+            "face_color": "#228833",
+            "label": "RANGER-Fast",
+            "paradigm": "explicit"
+        },
+        "angst": {
+            "marker_pyplot": "d",
+            "marker_plotly": "diamond",
+            "marker_color": "#000000",
+            "face_color": "#66CCEE",
+            "label": "AnGST",
+            "paradigm": "explicit"
+        },
+        "_comment2": "implicit phylogenetic methods are yellows, oranges or reds",
+        "gloome.ml": {
+            "marker_pyplot": "^",
+            "marker_plotly": "triangle-up",
+            "marker_color": "#DDAA33",
+            "face_color": "white",
+            "label": "GLOOME (ML)",
+            "paradigm": "implicit"
+        },
+        "gloome.ml.without_tree": {
+            "marker_pyplot": "v",
+            "marker_plotly": "triangle-down",
+            "marker_color": "#EE6677",
+            "face_color": "white",
+            "label": "GLOOME (ML) without tree",
+            "paradigm": "implicit"
+        },
+        "gloome.mp": {
+            "marker_pyplot": "^",
+            "marker_plotly": "triangle-up",
+            "marker_color": "#DDAA33",
+            "face_color": "#DDAA33",
+            "label": "GLOOME (MP)",
+            "paradigm": "implicit"
+        },
+        "gloome.mp.without_tree": {
+            "marker_pyplot": "v",
+            "marker_plotly": "triangle-down",
+            "marker_color": "#EE6677",
+            "face_color": "#EE6677",
+            "label": "GLOOME (MP) without tree",
+            "paradigm": "implicit"
+        },
+        "count.mp": {
+            "marker_pyplot": "o",
+            "marker_plotly": "circle",
+            "marker_color": "#AA3377",
+            "face_color": "#AA3377",
+            "label": "Count (MP)",
+            "paradigm": "implicit"
+        },
+        "count.ml": {
+            "marker_pyplot": "o",
+            "marker_plotly": "circle",
+            "marker_color": "#AA3377",
+            "face_color": "white",
+            "label": "Count (ML)",
+            "paradigm": "implicit"
+        },
+        "_comment3": "non-phylogenetic methods are grays or black",
+        "wn": {
+            "marker_pyplot": "x",
+            "marker_plotly": "x",
+            "marker_color": "#000000",
+            "face_color": "#000000",
+            "label": "Wn",
+            "paradigm": "parametric"
+        }
+    }
+}

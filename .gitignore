@@ -1,0 +1,14 @@
+arc/
+scrap/
+tmp*
+nohup*
+.txt
+.vscode
+pyrightconfig.json
+__pycache__
+# Ignore everything in this directory
+data/*
+plots/*
+# But not the directory itself
+!data/.gitkeep
+!plots/.gitkeep

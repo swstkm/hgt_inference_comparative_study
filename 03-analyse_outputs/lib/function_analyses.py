@@ -642,16 +642,6 @@ def fit_transferability_increase_model(df, main_variable_name, correction_variab
     # relative increase in HGT events
     df["relative_hgt_increase"] = df["residuals"] / model_fit1.fittedvalues
 
-    # formula2 = relative_hgt_increase ~ main_variable_name
-    formula2 = f"Q('relative_hgt_increase') ~ Q('{main_variable_name}')"
-    model_data2 = df[[main_variable_name, "relative_hgt_increase"]]
-    model_fit2 = sm.OLS.from_formula(formula2, data=model_data2).fit()
-    # return coeff of main_variable_name, p-value of main_variable_name
-    model_results_summary[f"Increase in inferred transferability"] = model_fit2.params[
-        f"Q('{main_variable_name}')"
-    ]
-    model_results_summary["p-value"] = model_fit2.pvalues[f"Q('{main_variable_name}')"]
-
     # also return the parameters and p-values of model1
     model_results_summary[f"Coefficient of {correction_variable}"] = model_fit1.params[
         f"Q('{correction_variable}')"
@@ -660,10 +650,28 @@ def fit_transferability_increase_model(df, main_variable_name, correction_variab
         model_fit1.pvalues[f"Q('{correction_variable}')"]
     )
 
+    # then, we perform a MWU test of the relative HGT increase of the main_variable_name against the rest
+    # MWU test
+    main_var_0 = df[df[main_variable_name] == 0]["relative_hgt_increase"]
+    main_var_not_0 = df[df[main_variable_name] != 0]["relative_hgt_increase"]
+    mwu_stat, mwu_p = stats.mannwhitneyu(main_var_0, main_var_not_0, alternative="two-sided")
+    model_results_summary["MWU"] = mwu_stat
+    model_results_summary["p-value MWU"] = mwu_p
+    model_results_summary[f"mean if {main_variable_name}"] = main_var_not_0.mean()
+    model_results_summary[f"mean if not {main_variable_name}"] = main_var_0.mean()
+    model_results_summary["N1"] = main_var_0.shape[0]
+    model_results_summary["N2"] = main_var_not_0.shape[0]
+    # CLES = U/n1*n2
+    model_results_summary["CLES"] = mwu_stat / (main_var_0.shape[0] * main_var_not_0.shape[0])
+    # mean1 - mean2
+    model_results_summary["Increase in inferred transferability"] = (
+        main_var_not_0.mean() - main_var_0.mean()
+    )
+
     # find the spearman rho and p-value of the transfers vs correction_variable
-    rho, p = stats.spearmanr(df[correction_variable], df["transfers"])
+    rho, rho_p = stats.spearmanr(df[correction_variable], df["transfers"])
     model_results_summary[f"rho {correction_variable} vs HGT"] = rho
-    model_results_summary["p-value rho"] = p
+    model_results_summary["p-value rho"] = rho_p
 
     # how many of the main_variable_name in the column, are non-zero?
     num_main_var_name = df[df[main_variable_name] != 0].shape[0]
@@ -823,24 +831,20 @@ def compare_meta_category_transferability_vs_transfer_thresholds(
             transfers_results_summary["transfer_threshold"] = transfer_threshold
             transfers_results_summary["Number of HGTs"] = transfers_df["transfers"].sum()
             transfers_results_summary["method"] = method
+
             # store the results
             method_model_results_summary.append(transfers_results_summary)
 
     # if all methods were skipped, return None
     if not method_model_results_summary:
         return None
-
+    
     # create a df from the list of dicts
     method_model_results_summary_df = pd.DataFrame(method_model_results_summary)
     # sort by method and then by transfer_threshold
     method_model_results_summary_df.sort_values(
         by=["method", "transfer_threshold"], inplace=True
     )
-
-    # # # keep only the rows where the p-value of the main_variable_name is less than alpha
-    # method_model_results_summary_df = method_model_results_summary_df[
-    #     method_model_results_summary_df["p-value"] < alpha
-    # ]
 
     return method_model_results_summary_df
 
@@ -850,7 +854,7 @@ def plot_model_summary_pyplot(
     main_variable_name,
     vs_variable_name,
     x_variable,
-    y_variable="Increase in inferred transferability",
+    y_variable="CLES",
     figsave_filepath=None,
     legend=False,
 ):

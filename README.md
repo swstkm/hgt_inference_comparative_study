@@ -2,11 +2,19 @@
 
 Code to reproduce the results of the paper, "Horizontal Gene Transfer Inference: Gene presence-absence outperforms gene trees" where we perform a comparative study of HGT inference methods. See: [preprint in bioRxiv](https://www.biorxiv.org/content/10.1101/2024.12.27.630302).
 
-Each folder for steps 01, 02, and 03, contain Jupyter notebooks that were run in the order of their numbering. Scripts and other helper functions that they depend on or are mentioned in the notebooks can be found in the `src/` or `lib/` directories respectively.
+The project is organized into three main steps (`01`, `02`, `03`), each containing sequentially numbered Jupyter notebooks. Supporting scripts and helper functions referenced in these notebooks are located in the `src/` and `lib/` directories.
 
-Please note that using 'Run all' or equivalent in the jupyter notebooks will generally not be useful. Some of the intervening steps in the notebooks are markdown cells instructing how to run programs via shell, separately. These programs are time consuming ones, often utilising multiprocessing in an HPC. Please run the notebooks, cell by cell, keeping this in mind.
+## Notebook Usage
+- Execute notebooks **cell by cell** instead of using 'Run All'.
+- Many cells contain **markdown instructions** for running external shell programs. This is because several processes are computationally intensive and intended for HPC environments with multiprocessing capabilities.
 
-This study downloads and processes an number of large files, which were stored in the `data` directory, which is empty in this repo. If you follow/run the notebooks you will progressively fill the `data` directory to reproduce all the results as well a the figures in the paper. Alternatively, you can download this repo containing the results and figures in the `data` directory, from the [Zenodo link](https://zenodo.org/records/14555036) in the paper.
+## Data Management
+- The `data` directory is initially empty in this repository.
+- Running the notebooks sequentially will populate the `data` directory with:
+  - Downloaded files
+  - Processed results
+  - Generated figures
+- Alternatively, a complete dataset including results and figures can be downloaded from the [Zenodo link](https://zenodo.org/records/14555036) in the paper.
 
 ## Required python packages
 
@@ -14,5 +22,5 @@ A Mamba/Conda environment called `hgt_analyses` was used for all the analyses. T
 ```
 mamba env create -f mamba_packages.yml
 ```
-I use Mamba since it's faster than using regular Conda but if you use Conda just replace `mamba` with `conda` in the above command.
+If you use Conda instead of Mamba just replace `mamba` with `conda` in the above command.
 

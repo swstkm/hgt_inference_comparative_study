@@ -15,6 +15,7 @@ dependencies:
   - argon2-cffi-bindings=21.2.0=py312h66e93f0_5
   - aria2=1.37.0=h347180d_1
   - arrow=1.3.0=pyhd8ed1ab_0
+  - asteval=1.0.6=pyhd8ed1ab_0
   - asttokens=2.4.1=pyhd8ed1ab_0
   - async-lru=2.0.4=pyhd8ed1ab_0
   - atk-1.0=2.38.0=h04ea711_2
@@ -42,21 +43,23 @@ dependencies:
   - blast=2.15.0=pl5321h6f7f691_1
   - bleach=6.1.0=pyhd8ed1ab_0
   - bokeh=3.5.2=pyhd8ed1ab_0
+  - brokenaxes=0.4.2=pyhd8ed1ab_0
   - brotli=1.1.0=hb9d3cd8_2
   - brotli-bin=1.1.0=hb9d3cd8_2
   - brotli-python=1.1.0=py312h2ec8cdc_2
   - bzip2=1.0.8=h4bc722e_7
   - c-ares=1.34.1=heb4867d_0
-  - ca-certificates=2024.8.30=hbcca054_0
+  - ca-certificates=2025.1.31=hbcca054_0
   - cached-property=1.5.2=hd8ed1ab_1
   - cached_property=1.5.2=pyha770c72_1
   - cairo=1.18.0=h3faef2a_0
-  - certifi=2024.8.30=pyhd8ed1ab_0
+  - certifi=2025.1.31=pyhd8ed1ab_0
   - cffi=1.17.1=py312h06ac9bb_0
   - charset-normalizer=3.4.0=pyhd8ed1ab_0
   - click=8.1.7=unix_pyh707e725_0
   - cloudpickle=3.0.0=pyhd8ed1ab_0
   - colorama=0.4.6=pyhd8ed1ab_0
+  - colorcet=3.1.0=pyhd8ed1ab_1
   - comm=0.2.2=pyhd8ed1ab_0
   - contourpy=1.3.0=py312h68727a3_2
   - curl=8.8.0=he654da7_1
@@ -65,12 +68,14 @@ dependencies:
   - dask=2024.9.1=pyhd8ed1ab_0
   - dask-core=2024.9.1=pyhd8ed1ab_0
   - dask-expr=1.1.15=pyhd8ed1ab_0
+  - datashader=0.17.0=pyhd8ed1ab_0
   - dbus=1.13.6=h5008d03_3
   - debugpy=1.8.7=py312h2ec8cdc_0
   - decorator=5.1.1=pyhd8ed1ab_0
   - defusedxml=0.7.1=pyhd8ed1ab_0
   - dendropy=4.6.1=pyhdfd78af_0
   - diamond=2.1.9=h43eeafb_0
+  - dill=0.3.9=pyhd8ed1ab_1
   - distributed=2024.9.1=pyhd8ed1ab_0
   - docopt=0.6.2=py_1
   - easel=0.49=h031d066_0
@@ -96,6 +101,7 @@ dependencies:
   - fribidi=1.0.10=h36c2ea0_0
   - fsspec=2024.9.0=pyhff2d567_0
   - ftpretty=0.4.0=pyhd8ed1ab_0
+  - future=1.0.0=pyhd8ed1ab_2
   - gawk=5.3.1=hcd3d067_0
   - gdk-pixbuf=2.42.12=hb9ae30d_0
   - gettext=0.22.5=he02047a_3
@@ -211,6 +217,7 @@ dependencies:
   - libidn2=2.3.7=hd590300_0
   - libjpeg-turbo=3.0.0=hd590300_1
   - liblapack=3.9.0=24_linux64_openblas
+  - libllvm14=14.0.6=hcd5def8_4
   - libllvm15=15.0.7=hb3ce162_4
   - libllvm16=16.0.6=hb3ce162_3
   - libllvm18=18.1.7=hb77312f_0
@@ -250,6 +257,8 @@ dependencies:
   - libxslt=1.1.39=h76b75d6_0
   - libzlib=1.2.13=h4ab18f5_6
   - littleutils=0.2.4=pyhd8ed1ab_0
+  - llvmlite=0.42.0=py312hb06c811_1
+  - lmfit=1.3.3=pyhd8ed1ab_0
   - locket=1.0.0=pyhd8ed1ab_0
   - loguru=0.7.2=py312h7900ff3_2
   - lxml=5.2.2=py312hb90d8a5_0
@@ -268,6 +277,7 @@ dependencies:
   - mpi=1.0=openmpi
   - mpmath=1.3.0=pyhd8ed1ab_0
   - msgpack-python=1.1.0=py312h68727a3_0
+  - multipledispatch=0.6.0=pyhd8ed1ab_1
   - munkres=1.1.4=pyh9f0ad1d_0
   - mysql-common=8.3.0=hf1915f5_4
   - mysql-libs=8.3.0=hca2cd23_4
@@ -287,11 +297,12 @@ dependencies:
   - notebook-shim=0.2.4=pyhd8ed1ab_0
   - nspr=4.35=h27087fc_0
   - nss=3.100=hca3bf56_0
-  - numpy=2.1.2=py312h58c1407_0
+  - numba=0.59.1=py312hacefee8_0
+  - numpy=1.26.4=py312heda63a1_0
   - openjpeg=2.5.2=h488ebb8_0
   - openmpi=4.1.6=hc5af2df_101
   - openpyxl=3.1.5=py312h710cb58_1
-  - openssl=3.4.0=hb9d3cd8_0
+  - openssl=3.4.1=h7b32b05_0
   - orc=2.0.1=h17fec99_1
   - outdated=0.2.2=pyhd8ed1ab_1
   - overrides=7.7.0=pyhd8ed1ab_0
@@ -301,6 +312,7 @@ dependencies:
   - pandoc=3.5=ha770c72_0
   - pandocfilters=1.5.0=pyhd8ed1ab_0
   - pango=1.54.0=h84a9a3c_0
+  - param=2.2.0=pyhd8ed1ab_0
   - parso=0.8.4=pyhd8ed1ab_0
   - partd=1.4.2=pyhd8ed1ab_0
   - patsy=0.5.6=pyhd8ed1ab_0
@@ -348,10 +360,11 @@ dependencies:
   - ptyprocess=0.7.0=pyhd3deb0d_0
   - pulseaudio-client=17.0=hb77b528_0
   - pure_eval=0.2.3=pyhd8ed1ab_0
-  - pyarrow=16.1.0=py312h9cebb41_2
-  - pyarrow-core=16.1.0=py312h0983c49_2_cpu
+  - pyarrow=16.1.0=py312h8da182e_1
+  - pyarrow-core=16.1.0=py312h5429d62_1_cpu
   - pyarrow-hotfix=0.6=pyhd8ed1ab_0
   - pycparser=2.22=pyhd8ed1ab_0
+  - pyct=0.5.0=pyhd8ed1ab_1
   - pydot=3.0.1=py312h7900ff3_1
   - pyfaidx=0.8.1.1=pyhdfd78af_0
   - pygments=2.18.0=pyhd8ed1ab_0
@@ -398,6 +411,7 @@ dependencies:
   - seaborn-base=0.13.2=pyhd8ed1ab_2
   - send2trash=1.8.3=pyh0d859eb_0
   - setuptools=75.1.0=pyhd8ed1ab_0
+  - setuptools-scm=8.2.1=pyhd8ed1ab_0
   - simplejson=3.19.3=py312h66e93f0_1
   - sip=6.7.12=py312h30efb56_0
   - six=1.16.0=pyh6c4a22f_0
@@ -429,6 +443,7 @@ dependencies:
   - typing_utils=0.1.0=pyhd8ed1ab_0
   - tzdata=2024b=hc8b5060_0
   - ucx=1.16.0=h209287a_5
+  - uncertainties=3.2.2=pyhd8ed1ab_2
   - uri-template=1.3.0=pyhd8ed1ab_0
   - urllib3=2.2.3=pyhd8ed1ab_0
   - wcwidth=0.2.13=pyhd8ed1ab_0

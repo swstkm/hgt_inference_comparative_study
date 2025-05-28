@@ -18,9 +18,4 @@ The project is organized into three main steps (`01`, `02`, `03`), each containi
 
 ## Required python packages
 
-A Mamba/Conda environment called `hgt_analyses` was used for all the analyses. This environment with all required packages can easily be created again using the `mamba_packages.yml` file, using the following command:
-```
-mamba env create -f mamba_packages.yml
-```
-If you use Conda instead of Mamba just replace `mamba` with `conda` in the above command.
-
+Use the Mamba/Conda environment in `hgt_analyses.yml` for all the analyses, except when you run AnGST (i.e. `02-run_programs/src/run_angst.py`) in which case you need to use the python2 environment `hgt_analyses_py2.yml`.

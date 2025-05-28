@@ -1,5 +1,6 @@
 import os
 from multiprocessing import Pool
+from typing import Union, List, Optional
 
 # to suppress warning from ete3 because it's not up to date with py3.12
 import warnings
@@ -182,7 +183,7 @@ def prepare_nogwise_transfer_thresholds_df(nogwise_transfers_df, threshold_colum
 def compile_angst_results(output_dir, input_tree_filepath):
     # for each nog_id/ read in the .events file inside it and store it
     nogwise_hgt_list = []
-    for nog_id in os.listdir(output_dir):
+    for nog_id in [d for d in os.listdir(output_dir) if os.path.isdir(os.path.join(output_dir, d))]:
         # read in the AnGST.events file inside it, but only lines that start with "[hgt]: "
         with open(os.path.join(output_dir, nog_id, "AnGST.events"), "r") as nog_fo:
             # lines look like `[hgt]: source_branch --> target_branch`
@@ -213,6 +214,11 @@ def compile_angst_results(output_dir, input_tree_filepath):
     # we need to map these to the input tree internal node names
     input_tree = ete3.Tree(input_tree_filepath, format=1)
     angst_node_mapping = map_angst_to_input_nodes(input_tree, angst_internal_nodes)
+    # write this mapping to a tsv file
+    with open(os.path.join(output_dir, "angst_node_mapping.tsv"), "w") as angst_node_mapping_fo:
+        angst_node_mapping_fo.write("angst_node\tinput_tree_node\n")
+        for angst_node, input_tree_node in angst_node_mapping.items():
+            angst_node_mapping_fo.write(f"{angst_node}\t{input_tree_node}\n")
 
     # now replace in the nogwise df, the names, based on this mapping
     nogwise_branchwise_df["source_branch"] = nogwise_branchwise_df["source_branch"].map(
@@ -259,6 +265,11 @@ def compile_ale_outputs(output_dir, input_tree):
 
     ale_tree = ete3.Tree(ale_tree_string, format=1)
     ale_node_mapping = map_output_to_input_nodes(input_tree, ale_tree, ale=True)
+    # write this mapping to a tsv file
+    with open(os.path.join(output_dir, "ale_node_mapping.tsv"), "w") as ale_node_mapping_fo:
+        ale_node_mapping_fo.write("ale_node\tinput_tree_node\n")
+        for ale_node, input_tree_node in ale_node_mapping.items():
+            ale_node_mapping_fo.write(f"{ale_node}\t{input_tree_node}\n")
 
     # now read in all the *uTs files in the output_dir, and process them.
     # each file contains the columns: 'source_branch', 'recipient_branch', and 'freq' (of transfer).
@@ -414,6 +425,11 @@ def compile_ranger_results(ranger_dir, input_tree_filepath):
     ranger_tree = ete3.Tree(ranger_tree_string, format=1)
     input_tree = ete3.Tree(input_tree_filepath, format=1)
     ranger_node_mapping = map_output_to_input_nodes(input_tree, ranger_tree)
+    # write this mapping to a tsv file
+    with open(os.path.join(ranger_dir, "ranger_node_mapping.tsv"), "w") as ranger_node_mapping_fo:
+        ranger_node_mapping_fo.write("ranger_node\tinput_tree_node\n")
+        for ranger_node, input_tree_node in ranger_node_mapping.items():
+            ranger_node_mapping_fo.write(f"{ranger_node}\t{input_tree_node}\n")
 
     # now replace in the nogwise_branchwise df, the names, based on this mapping
     nogwise_branchwise_hgt_df["source_branch"] = nogwise_branchwise_hgt_df[
@@ -679,171 +695,312 @@ def process_count_ml_output(count_ML_output_file: str):
     return count_ml_gains_df, count_ml_nogwise_gains_df, count_ml_losses_df
 
 
-def compile_gloome_results(
-    expectations_df: pd.DataFrame,
-    gainloss_df: pd.DataFrame,
-    gloome_node_mapping: dict,
-    ml_mp: str,
-    species_tree_bool: bool,
+def read_and_compile_gloome_results(
+    gloome_output_dir: Union[str, List[str]], # can be a list of gloome output dirs
     pa_matrix_tsv_filepath: str,
+    ml_mp: str, # either 'ml' or 'mp'
+    input_tree_filepath: str,
 ):
+    """
+    Read and compile GLOOME results from the specified output directory.
 
-    if ml_mp not in ["ml", "mp"]:
+    Parameters:
+    gloome_output_dir: Path to the GLOOME output directory.
+                       This can be a list of gloome output dirs (in case of 'mp' mode)
+    pa_matrix_tsv_filepath (str): Path to the PA matrix TSV file.
+    ml_mp (str): Specify whether to use 'ml' or 'mp' for maximum-likelihood or maximum-parsimony.
+                 In case of 'mp', the
+    input_tree_filepath (str): Path to the input tree file.
+                               This is required if GLOOME was run with a species tree.
+                               If not available, set it as None, 
+                               and the function will not map the branch names to the input tree.
+    
+    Returns:
+    dict: A dictionary containing compiled GLOOME results.
+          The keys are the file names and the values are the corresponding DataFrames.
+    """
+
+    # if input_tree_filepath is not None, read in the tree
+    input_tree = None
+    if input_tree_filepath is not None:
+        input_tree = ete3.Tree(input_tree_filepath, format=1)
+    else:
+        input_tree = None
+    # make sure pa_matrix_tsv_filepath is a valid file
+    if not os.path.isfile(pa_matrix_tsv_filepath):
+        raise ValueError(
+            f"PA matrix TSV file {pa_matrix_tsv_filepath} does not exist. Please provide a valid file."
+        )
+
+    # if it's mp, make sure gloome_output_dir is a list of dirs
+    if ml_mp == "mp":
+        if isinstance(gloome_output_dir, str):
+            raise ValueError(
+                "For maximum-parsimony mode, gloome_output_dir must be a list of directories."
+                "These correspond to the different gain penalty ratios used in GLOOME."
+            )
+        # if gloome_output_dir is a list, make sure it has at least 2 elements
+        if len(gloome_output_dir) < 2:
+            raise ValueError(
+                "For maximum-parsimony mode, gloome_output_dir must be a list of directories."
+                "These correspond to the different gain penalty ratios used in GLOOME."
+            )
+        gloome_results_dict = read_and_compile_mp_gloome_results(
+            gloome_output_dir, pa_matrix_tsv_filepath, input_tree
+        )
+    elif ml_mp == "ml":
+        if isinstance(gloome_output_dir, list):
+            raise ValueError(
+                "For maximum-likelihood mode, gloome_output_dir must be a single directory."
+            )
+        gloome_results_dict = read_and_compile_ml_gloome_results(
+            gloome_output_dir, pa_matrix_tsv_filepath, input_tree
+        )
+    else:
         raise ValueError(
             "ml_mp must be either 'ml' or 'mp', for maximum-likelihood or maximum-parsimony"
         )
+        
+    # return the dictionary
+    return gloome_results_dict
 
-    # if species_tree_bool is True, prepare branchwise file and nogwise.branchwise files also, apart from nogwise file
-    if not species_tree_bool:
-        # if species_tree_bool is False, we don't have a species tree comparable across methods
-        # so we keep the terminal branches only (internal branch labels start with 'N')
-        gainloss_df = gainloss_df[gainloss_df["branch"].str.startswith("N") == False]
-        expectations_df = expectations_df[
-            expectations_df["branch"].str.startswith("N") == False
-        ]
 
-    # prepare nogwise file
-    # Replace the branch names with the input tree branch names if species_tree_bool is True
-    if species_tree_bool:
-        gainloss_df = gainloss_df.rename(columns={"branch": "gloome_branch_name"})
-        gainloss_df.loc[:, "recipient_branch"] = gainloss_df["gloome_branch_name"].map(
-            gloome_node_mapping
-        )
-    else:
-        gainloss_df.rename(columns={"branch": "recipient_branch"}, inplace=True)
-    gainloss_df["source_branch"] = "unknown"
+def read_and_compile_mp_gloome_results(
+        gloome_output_dirs: List[str],
+        pa_matrix_tsv_filepath: str,
+        input_tree: Optional[ete3.Tree] = None,
+):
+    """
+    Read and compile GLOOME results for maximum-parsimony mode.
 
-    # we need to replace the POS column data with NOG-IDs.
-    # First read in the tsv file of the PA matrix we created for Count (since the matrix was the same for GLOOME also)
-    # find the _PA_matrix.tsv file in the Count dir, using the gloome_output_dir string
+    Parameters:
+    gloome_output_dirs (List[str]): List of paths to GLOOME output directories.
+    pa_matrix_tsv_filepath (str): Path to the PA matrix TSV file.
+    input_tree (ete3.Tree): ETE3 Tree object representing the input tree.
 
+    Returns:
+    dict: A dictionary containing compiled GLOOME results.
+          The keys are the file names and the values are the corresponding DataFrames.
+    """
+    # read in the PA matrix TSV file
     pa_matrix_df = pd.read_csv(pa_matrix_tsv_filepath, sep="\t")
-    # the first column here contains the NOGs. The row number of the NOG corresponds to the POS IDs in the gainloss_df
     # create a dict of row number to NOG IDs in pa_matrix_df
     pos_nog_dict = {i + 1: nog for i, nog in enumerate(pa_matrix_df.iloc[:, 0])}
-    # now use the dict to replace POS column with NOG IDs
-    gainloss_df["POS"] = gainloss_df["POS"].map(pos_nog_dict)
-    # rename the POS column to nog_id and 'expectation' column to 'transfers'
-    gainloss_df = gainloss_df.rename(
+
+    # create a dict to store the compiled results
+    gloome_results_dict = {}
+    nogwise_gain_dfs = []
+    nogwise_branchwise_gain_dfs = {}
+
+    # process each gloome output dir with corresponding gain penalty ratio
+    for gloome_output_dir in gloome_output_dirs:
+        gloome_tree = ete3.Tree(
+            os.path.join(gloome_output_dir, "TheTree.INodes.ph"), format=1
+        )
+        if input_tree is not None:
+            # if input tree is provided, map the branch names to the input tree
+            gloome_node_mapping = map_output_to_input_nodes(input_tree, gloome_tree)
+            # write this mapping to a tsv file
+            with open(
+                os.path.join(gloome_output_dir, "gloome_mp_node_mapping.tsv"),
+                "w",
+            ) as gloome_node_mapping_fo:
+                gloome_node_mapping_fo.write("gloome_node\tinput_tree_node\n")
+                for gloome_node, input_tree_node in gloome_node_mapping.items():
+                    gloome_node_mapping_fo.write(
+                        f"{gloome_node}\t{input_tree_node}\n"
+                    )
+        else:
+            gloome_node_mapping = {}
+        # read in the per-position-per-branch expectation files
+        all_res_files = [
+            f
+            for f in os.listdir(gloome_output_dir)
+            if f.startswith("gainLossMP") and f.endswith(".txt")
+        ]
+        per_pos_per_branch_expectations_file_path = [
+            os.path.join(gloome_output_dir, f)
+            for f in all_res_files
+            if f.endswith(".PerPosPerBranch.txt")
+        ][0]
+        # read in the file: skip commented (#) lines
+        per_pos_per_branch_expectations_df = pd.read_csv(
+            per_pos_per_branch_expectations_file_path, comment="#", sep="\t"
+        ).rename(columns={"branch": "gloome_branch_name"})
+        # if input tree is provided, map the gloome branch names to the input tree branch names
+        if input_tree is not None:
+            per_pos_per_branch_expectations_df["recipient_branch"] = (
+                per_pos_per_branch_expectations_df["gloome_branch_name"]
+                .map(gloome_node_mapping)
+                .astype(str)
+            )
+        else:
+            per_pos_per_branch_expectations_df["recipient_branch"] = (
+                per_pos_per_branch_expectations_df["gloome_branch_name"]
+            )
+        # use the pos_nog_dict to replace the POS column with NOG IDs
+        per_pos_per_branch_expectations_df["POS"] = per_pos_per_branch_expectations_df[
+            "POS"
+        ].map(pos_nog_dict)
+        # rename the POS column to nog_id and exp01 column to transfers
+        per_pos_per_branch_expectations_df.rename(
+            columns={
+                "POS": "nog_id",
+                "expectation": "transfers",
+            },
+            inplace=True,
+        )
+        # retain only rows where G/L is gain
+        per_pos_per_branch_expectations_df = per_pos_per_branch_expectations_df[
+            per_pos_per_branch_expectations_df["G/L"] == "gain"
+        ]
+        # add a source_branch column
+        per_pos_per_branch_expectations_df["source_branch"] = "unknown"
+        # the transfer threshold column is the gain penalty ratio
+        # this is contained in the 3rd line of the per_pos_per_branch_expectations_file
+        # read the file again to get the gain penalty ratio
+        with open(
+            per_pos_per_branch_expectations_file_path, "r"
+        ) as f:
+            gain_penalty_ratio = f.readlines()[2].strip().split("=")[1].strip()
+        # add the gain penalty ratio to the df
+        per_pos_per_branch_expectations_df["transfer_threshold"] = gain_penalty_ratio
+        # retain only the columns nog_id, source_branch, recipient_branch, gloome_branch_name, transfers, transfer_threshold
+        nogwise_branchwise_gains_df = per_pos_per_branch_expectations_df[
+            [
+                "nog_id",
+                "source_branch",
+                "recipient_branch",
+                "gloome_branch_name",
+                "transfers",
+                "transfer_threshold",
+            ]
+        ]
+        # add this df to the list
+        nogwise_branchwise_gain_dfs[gain_penalty_ratio] = nogwise_branchwise_gains_df
+
+        # group by nog_id and sum the transfers, 
+        nogwise_gains_df = nogwise_branchwise_gains_df.copy()
+        nogwise_gains_df = nogwise_gains_df.groupby("nog_id").sum().reset_index()
+        # add the transfer_threshold column to the nogwise_gains_df
+        nogwise_gains_df["transfer_threshold"] = gain_penalty_ratio
+        nogwise_gains_df = nogwise_gains_df[
+            ["nog_id", "transfers", "transfer_threshold"]
+        ]
+        # add the nogwise_gains_df to the list
+        nogwise_gain_dfs.append(nogwise_gains_df)
+    
+    # concatenate the nogwise_gain_dfs
+    nogwise_gains_df = pd.concat(nogwise_gain_dfs, ignore_index=True)
+    gloome_results_dict[
+        f"compiled_transfers.nogwise.gloome.mp."] = nogwise_gains_df
+    
+    # for nogwise branchwise, we create a file for each gain penalty ratio
+    for gain_penalty_ratio, nogwise_branchwise_gains_df in nogwise_branchwise_gain_dfs.items():
+        gloome_results_dict[
+            f"compiled_transfers.nogwise.branchwise.gloome.mp.{gain_penalty_ratio}."
+        ] = nogwise_branchwise_gains_df
+    # return the dictionary
+    return gloome_results_dict
+
+
+def read_and_compile_ml_gloome_results(
+    gloome_output_dir: str,
+    pa_matrix_tsv_filepath: str,
+    input_tree: Optional[ete3.Tree] = None,
+):
+    """
+    Read and compile GLOOME results for maximum-likelihood mode.
+
+    Parameters:
+    gloome_output_dir (str): Path to the GLOOME output directory.
+    pa_matrix_tsv_filepath (str): Path to the PA matrix TSV file.
+    input_tree (ete3.Tree): ETE3 Tree object representing the input tree.
+
+    Returns:
+    dict: A dictionary containing compiled GLOOME results.
+          The keys are the file names and the values are the corresponding DataFrames.
+    """
+    # read in the PA matrix TSV file
+    pa_matrix_df = pd.read_csv(pa_matrix_tsv_filepath, sep="\t")
+    # create a dict of row number to NOG IDs in pa_matrix_df
+    pos_nog_dict = {i + 1: nog for i, nog in enumerate(pa_matrix_df.iloc[:, 0])}
+
+    # read in the per-position-per-branch expectation file
+    per_pos_per_branch_expectations_file_path = os.path.join(
+        gloome_output_dir, "gainLossProbExpPerPosPerBranch.txt"
+    )
+    # read in the file: skip commented (#) lines
+    per_pos_per_branch_expectations_df = pd.read_csv(
+        per_pos_per_branch_expectations_file_path, comment="#", sep="\t"
+    ).rename(columns={"branch": "gloome_branch_name"})
+    # if input tree is provided, map the branch names to the input tree
+    if input_tree is not None:
+        gloome_tree = ete3.Tree(
+            os.path.join(gloome_output_dir, "TheTree.INodes.ph"), format=1
+        )
+        gloome_node_mapping = map_output_to_input_nodes(input_tree, gloome_tree)
+        # write this mapping to a tsv file
+        with open(
+            os.path.join(gloome_output_dir, "gloome_ml_node_mapping.tsv"),
+            "w",
+        ) as gloome_node_mapping_fo:
+            gloome_node_mapping_fo.write("gloome_node\tinput_tree_node\n")
+            for gloome_node, input_tree_node in gloome_node_mapping.items():
+                gloome_node_mapping_fo.write(
+                    f"{gloome_node}\t{input_tree_node}\n"
+                )
+        # replace the gloome branch names with the input tree branch names
+        per_pos_per_branch_expectations_df["recipient_branch"] = (
+            per_pos_per_branch_expectations_df["gloome_branch_name"]
+            .map(gloome_node_mapping)
+            .astype(str)
+        )
+    else:
+        per_pos_per_branch_expectations_df['recipient_branch'] = per_pos_per_branch_expectations_df[
+            "gloome_branch_name"
+        ]
+    # use the pos_nog_dict to replace the POS column with NOG IDs
+    per_pos_per_branch_expectations_df["POS"] = per_pos_per_branch_expectations_df[
+        "POS"
+    ].map(pos_nog_dict)
+    # rename the POS column to nog_id and expectation column to transfers
+    per_pos_per_branch_expectations_df.rename(
         columns={
             "POS": "nog_id",
             "expectation": "transfers",
             "probability": "transfer_threshold",
-        }
+        },
+        inplace=True,
     )
-
-    # retain only the columns 'source_branch', 'recipient_branch', 'transfers', 'nog_id', 'gloome_branch_name' and 'G/L' in that order
-    column_names = [
-        "nog_id",
-        "source_branch",
-        "recipient_branch",
-        "transfers",
-        "transfer_threshold",
-        "G/L",
+    # retain only rows where G/L is gain
+    per_pos_per_branch_expectations_df = per_pos_per_branch_expectations_df[
+        per_pos_per_branch_expectations_df["G/L"] == "gain"
     ]
-    # retain 'gloome_branch_name' only if species_tree_bool is True
-    if species_tree_bool:
-        column_names.insert(-1, "gloome_branch_name")
-    gainloss_df = gainloss_df[column_names]
-    nw_bw_gains_df = gainloss_df[gainloss_df["G/L"] == "gain"][column_names[:-1]]
-
-    # groupby nog_id and branch and sum the transfers to get nogwise transfers.
-    # set up 'transfer_threshold' column
-    nw_gains_df = prepare_nogwise_transfer_thresholds_df(nw_bw_gains_df)
-
-    # do the same for a nw_bw_losses_df
-    nw_bw_losses_df = gainloss_df[gainloss_df["G/L"] == "loss"][column_names[1:-1]]
-    # rename transfers to losses
-    nw_bw_losses_df = nw_bw_losses_df.rename(
-        columns={"recipient_branch": "branch", "transfers": "losses"}
-    )
-
-    return {
-        f"compiled_transfers.nogwise.gloome.{ml_mp}": nw_gains_df,
-        f"compiled_transfers.nogwise.branchwise.gloome.{ml_mp}": nw_bw_gains_df,
-        f"compiled_losses.nogwise.branchwise.gloome.{ml_mp}": nw_bw_losses_df,
+    # add a source_branch column
+    per_pos_per_branch_expectations_df["source_branch"] = "unknown"
+    # retain only the columns nog_id, source_branch, recipient_branch, gloome_branch_name, transfers, transfer_threshold
+    nogwise_branchwise_gains_df = per_pos_per_branch_expectations_df[
+        [
+            "nog_id",
+            "source_branch",
+            "recipient_branch",
+            "gloome_branch_name",
+            "transfers",
+            "transfer_threshold",
+        ]
+    ]
+    # add this df to dictionary
+    gloome_results_dict = {
+        f"compiled_transfers.nogwise.branchwise.gloome.ml.": nogwise_branchwise_gains_df
     }
 
-
-def read_and_compile_gloome_results(
-    gloome_output_dir: str,
-    input_tree: ete3.Tree,
-    species_tree_bool: bool,  # if species tree was given as input or not
-    pa_matrix_tsv_filepath: str,
-):
-    # if species_tree_bool is True, there was a tree given to GLOOME as input,
-    # so we can find branchwise transfers and compare it to other programs like ALE, Ranger, etc.
-    # But if it's not available, branchwise transfers are not comparable, so we don't need to write out those files
-
-    all_gloome_results_dict = {}
-
-    gloome_tree = ete3.Tree(
-        os.path.join(gloome_output_dir, "TheTree.INodes.ph"), format=1
-    )
-    if species_tree_bool:
-        # if species tree is available, we can map the internal node names of the GLOOME tree to the input tree
-        gloome_node_mapping = map_output_to_input_nodes(input_tree, gloome_tree)
-    else:
-        # if species tree is not available, it's just the terminal branches that we care about so we don't need to map anything
-        gloome_node_mapping = {}
-
-    # first we process the ML results, and then the MP results
-    # for each of them, we read and prepare expectations_df and probabilties_df
-    # case ML: branchwise expectations are from "ExpectationPerBranch.txt" and probabilities are from "gainLossProbExpPerPosPerBranch.txt"
-    # case MP: branchwise expectations are from "gainLossMP.1.PerBranch.txt" and probabilities are from "gainLossMP.1.PerPosPerBranch.txt"
-
-    # case ML: branchwise expectations
-    ml_expectations_file_path = os.path.join(
-        gloome_output_dir, "ExpectationPerBranch.txt"
-    )
-    ml_expectations_df = pd.read_csv(ml_expectations_file_path, skiprows=[0], sep="\t")
-
-    # case ML: nogwise and nogwise.branchwise expectations
-    ml_gainloss_file_path = os.path.join(
-        gloome_output_dir, "gainLossProbExpPerPosPerBranch.txt"
-    )
-    ml_gainloss_df = pd.read_csv(ml_gainloss_file_path, skiprows=[0], sep="\t")
-
-    # prepare all compiled files for ML
-    all_gloome_results_dict.update(
-        compile_gloome_results(
-            ml_expectations_df,
-            ml_gainloss_df,
-            gloome_node_mapping,
-            "ml",
-            species_tree_bool,
-            pa_matrix_tsv_filepath,
-        )
-    )
-
-    # case MP: branchwise expectations
-    mp_expectations_file_path = os.path.join(
-        gloome_output_dir, "gainLossMP.1.PerBranch.txt"
-    )
-    # this file has 6 rows to skip instead of just one
-    mp_expectations_df = pd.read_csv(
-        mp_expectations_file_path, skiprows=list(range(6)), sep="\t"
-    )
-
-    # case MP: nogwise and nogwise.branchwise expectations
-    mp_gainloss_file_path = os.path.join(
-        gloome_output_dir, "gainLossMP.1.PerPosPerBranch.txt"
-    )
-    # skip first 5 rows and read in the file
-    mp_gainloss_df = pd.read_csv(
-        mp_gainloss_file_path, skiprows=list(range(5)), sep="\t"
-    )
-
-    # prepare all compiled files for MP
-    all_gloome_results_dict.update(
-        compile_gloome_results(
-            mp_expectations_df,
-            mp_gainloss_df,
-            gloome_node_mapping,
-            "mp",
-            species_tree_bool,
-            pa_matrix_tsv_filepath,
-        )
-    )
-
-    return all_gloome_results_dict
+    # concatenate the nogwise_branchwise_gains_df and use prepare_nogwise_transfer_thresholds_df to get nogwise_gains_df
+    nogwise_gains_df = nogwise_branchwise_gains_df.copy()
+    # Group by nog_id and sum the transfers
+    nogwise_gains_df = prepare_nogwise_transfer_thresholds_df(nogwise_gains_df)
+    # add the nogwise_gains_df to the dictionary
+    gloome_results_dict[
+        f"compiled_transfers.nogwise.gloome.ml."] = nogwise_gains_df
+    # return the dictionary
+    return gloome_results_dict

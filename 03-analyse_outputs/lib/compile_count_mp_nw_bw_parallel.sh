@@ -18,7 +18,7 @@ res_dir=$4
 input_dir="$program_runs_dir/Count/Count_MP/"
 echo "Input dir is $input_dir"
 # output_dir is the directory where all the output files will be written
-output_dir="$res_dir/count/"
+output_dir="$res_dir/count_mp/"
 # make the output dir if it doesn't exist
 mkdir -p $output_dir
 tree_filepath="$input_tree_filepath"

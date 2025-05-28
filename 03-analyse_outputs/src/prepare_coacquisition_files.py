@@ -626,9 +626,9 @@ if __name__ == "__main__":
         logger.add(sys.stdout, level=logger_level)
     else:
         logger_level = "INFO"
+    # tmp log file but in the same directory as the compiled_results_dir
     logger.add(
-        f"tmp_prepare_coacquisition_files_{
-               timestamp}.log",
+        f"{args.compiled_results_dir}/tmp_prepare_coacquisition_files_{timestamp}.log",
         level=logger_level,
     )
     logger.info(

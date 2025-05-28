@@ -48,7 +48,7 @@
             "marker_plotly": "triangle-down",
             "marker_color": "#EE6677",
             "face_color": "white",
-            "label": "GLOOME (ML) without tree",
+            "label": "GLOOME (ML) \u03B1",
             "paradigm": "implicit"
         },
         "gloome.mp": {
@@ -64,7 +64,7 @@
             "marker_plotly": "triangle-down",
             "marker_color": "#EE6677",
             "face_color": "#EE6677",
-            "label": "GLOOME (MP) without tree",
+            "label": "GLOOME (MP) \u03B1",
             "paradigm": "implicit"
         },
         "count.mp": {

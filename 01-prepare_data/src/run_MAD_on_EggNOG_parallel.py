@@ -8,6 +8,7 @@ import argparse
 import glob
 from multiprocessing import Pool
 
+
 def run_command(params):
     """
     Inputs:
@@ -20,6 +21,7 @@ def run_command(params):
         process = Popen(cmd, stdout=log_FO, universal_newlines=True)
         if process.wait() != 0:
             raise CalledProcessError(process.returncode, cmd)
+
 
 def MAD_roots_NOG_trees_parallel(input_file_path, mad_executable, n_lines, num_subprocesses):
     """
@@ -36,8 +38,9 @@ def MAD_roots_NOG_trees_parallel(input_file_path, mad_executable, n_lines, num_s
         The output file will contain the same number of lines as the input file, but the second column will contain the rooted trees.
     """
     # Check if the input file exists
-    if not os.path.isfile(input_file_path): 
-        raise FileNotFoundError(f"The input file {input_file_path} does not seem to exist. Check the filepath provided.")
+    if not os.path.isfile(input_file_path):
+        raise FileNotFoundError(f"The input file {
+                                input_file_path} does not seem to exist. Check the filepath provided.")
     # Find the full path of the input file and extract the dir name
     input_file_path = os.path.abspath(input_file_path)
     input_dir = os.path.dirname(input_file_path)
@@ -51,50 +54,53 @@ def MAD_roots_NOG_trees_parallel(input_file_path, mad_executable, n_lines, num_s
     # Create the temporary directory
     os.mkdir(tmp_dir)
     # log this with time, along with location of the tmp folder
-    print(f'Created the tmp folder at: {datetime.now()} at location: {tmp_dir}') 
-
+    print(f'Created the tmp folder at: {
+          datetime.now()} at location: {tmp_dir}')
 
     # Open the input file and read it in chunks of `n_lines` lines
-    nwk_split_files = [] # track the filenames of split files containing the second column (tree)
-    info_split_files = [] # track the filenames of split files containing the first column (treeID)
+    # track the filenames of split files containing the second column (tree)
+    nwk_split_files = []
+    # track the filenames of split files containing the first column (treeID)
+    info_split_files = []
 
+    def write_split_files(chunk, chunk_index, nwk_split_files, info_split_files):
+        """
+        Helper function to write out the split files for a given chunk.
+        """
+        split_chunk = [line.split() for line in chunk]
+        nwk_split_filepath = f"{tmp_dir}/tmp_tree_split.nwk.{chunk_index}"
+        info_split_filepath = f"{tmp_dir}/tmp_tree_split.info.{chunk_index}"
+        with open(nwk_split_filepath, 'w') as split_out_fo:
+            split_out_fo.write('\n'.join(line[1]
+                               for line in split_chunk) + '\n')
+        with open(info_split_filepath, 'w') as split_out_fo:
+            split_out_fo.write('\n'.join(line[0]
+                               for line in split_chunk) + '\n')
+        nwk_split_files.append(nwk_split_filepath)
+        info_split_files.append(info_split_filepath)
+        return nwk_split_files, info_split_files
+
+    # open the input file
     with open(input_file_path, 'r') as treesFO:
         chunk = []
         for i, line in enumerate(treesFO):
-            split_line = line.strip().split()
-            chunk.append(split_line)
+            chunk.append(line)
             if (i + 1) % n_lines == 0:
-                # Write out the split trees file
-                nwk_split_filepath = tmp_dir+'/tmp_tree_split.nwk.'+str((i // n_lines) + 1)
-                info_split_filepath = tmp_dir+'/tmp_tree_split.info.'+str((i // n_lines) + 1)
-                with open(nwk_split_filepath, 'w') as split_out_fo:
-                    split_out_fo.write('\n'.join(line[1] for line in chunk) + '\n')
-                with open(info_split_filepath, 'w') as split_out_fo:
-                    split_out_fo.write('\n'.join(line[0] for line in chunk) + '\n')
-                # track the filenames
-                nwk_split_files.append(nwk_split_filepath)
-                info_split_files.append(info_split_filepath)
+                nwk_split_files, info_split_files = write_split_files(
+                    chunk, (i // n_lines) + 1, nwk_split_files, info_split_files)
                 chunk = []
 
         # Write the last chunk if it's not empty
         if chunk:
-            split_chunk = [line.split() for line in chunk]
-            nwk_split_filepath = tmp_dir+'/tmp_tree_split.nwk.'+str((i // n_lines) + 2)
-            info_split_filepath = tmp_dir+'/tmp_tree_split.info.'+str((i // n_lines) + 2)
-            with open(nwk_split_filepath, 'w') as split_out_fo:
-                split_out_fo.write('\n'.join(line[1] for line in split_chunk) + '\n')
-            with open(info_split_filepath, 'w') as split_out_fo:
-                split_out_fo.write('\n'.join(line[0] for line in split_chunk) + '\n')
-            # track the filenames
-            nwk_split_files.append(nwk_split_filepath)
-            info_split_files.append(info_split_filepath)
+            nwk_split_files, info_split_files = write_split_files(
+                chunk, (len(nwk_split_files) // n_lines) + 2, nwk_split_files, info_split_files)
 
-    
-    # using subprocess.Popen inside the run_command function, 
+    # using subprocess.Popen inside the run_command function,
     # call MAD on all of these split newick files. Prepare the commands.
     # `mad -n trees.nwk.1`
-    commands = [([mad_executable, '-t', '-n', split_file_path], split_file_path+'.stdout') for split_index, split_file_path in enumerate(nwk_split_files)]
-    
+    commands = [([mad_executable, '-t', '-n', split_file_path], split_file_path+'.stdout')
+                for split_index, split_file_path in enumerate(nwk_split_files)]
+
     mad_start_time = time.time()
     # Log timestamp for the start of the MAD rooting process
     print(f'MAD rooting starting at: {datetime.now()}')
@@ -107,7 +113,6 @@ def MAD_roots_NOG_trees_parallel(input_file_path, mad_executable, n_lines, num_s
               Total time taken for MAD rooting: {timedelta(seconds=time.time() - mad_start_time)}')
     # Log that the split files are being combined, along with the timestamp
     print(f'{datetime.now()}: Combining the split files into one file...')
-
 
     # Note: mad adds a `.rooted` at the end of the input filename, as the output filename
     # combine the columns from the info files with the nwk.rooted files to prepare the final output file
@@ -124,25 +129,28 @@ def MAD_roots_NOG_trees_parallel(input_file_path, mad_executable, n_lines, num_s
             # combine the info and rooted trees
             with open(info_split_filepath, 'r') as info_file:
                 rooted_info_plus_tree_chunks = [
-                    '\t'.join([info_line.strip(), rooted_nwk_trees[line_index]])
+                    '\t'.join(
+                        [info_line.strip(), rooted_nwk_trees[line_index]])
                     for line_index, info_line in enumerate(info_file)
                 ]
 
             # write out the new tree line chunks to the output file
-            rootedOutputFO.write('\n'.join(rooted_info_plus_tree_chunks) + '\n')
+            rootedOutputFO.write(
+                '\n'.join(rooted_info_plus_tree_chunks) + '\n')
 
             # Clear memory
             del rooted_info_plus_tree_chunks
             del rooted_nwk_trees
-    
-    # delete the split nwk files in the tmp folder
+
+    # # delete the split nwk files in the tmp folder
     for split_file_name in nwk_split_files:
         os.remove(split_file_name)
     # combine all the log files into one log file using `tail -n +1`, and write in the input_dir with timestamp
     now = datetime.now()
     timestamp = now.strftime("%Y%m%d_%H%M%S")
-    os.system('tail -n +1 '+tmp_dir+'/*.stdout > '+input_dir+'/tmp_mad_rooting_splits_'+timestamp+'.log')
-    # delete the tmp folder
+    os.system('tail -n +1 '+tmp_dir+'/*.stdout > '+input_dir +
+              '/tmp_mad_rooting_splits_'+timestamp+'.log')
+    # # delete the tmp folder
     # os.system('rm -rf '+tmp_dir)
 
 
@@ -170,7 +178,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    MAD_roots_NOG_trees_parallel(args.Input, args.mad, args.nlines, args.num_subprocesses)
+    MAD_roots_NOG_trees_parallel(
+        args.Input, args.mad, args.nlines, args.num_subprocesses)
 
     print('Process time taken from start to finish: ' +
-                str(timedelta(seconds=time.time() - start_time)) )
+          str(timedelta(seconds=time.time() - start_time)))

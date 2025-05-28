@@ -98,10 +98,10 @@ if __name__ == '__main__':
     # write everything in terms of argparse instead of hardcoding
     import argparse
     parser = argparse.ArgumentParser(description="Run ALE on all gene trees")
-    parser.add_argument("--species", "-s", type=str, default="../../data/1236_wol_tree_pruned_no_internal_labels.nwk",
-                        help="Path to species tree file (default: ../../data/1236_wol_tree_pruned_no_internal_labels.nwk)")
-    parser.add_argument("--gene", "-g", type=str, default="../../data/1236_pruned_gene_trees.tsv.rooted",
-                        help="Path to gene trees file (default: ../../data/1236_pruned_gene_trees.tsv.rooted)")
+    parser.add_argument("--species", "-s", type=str, default="../../1236_wol_tree_pruned_no_internal_labels.nwk",
+                        help="Path to species tree file (default: ../../1236_wol_tree_pruned_no_internal_labels.nwk)")
+    parser.add_argument("--gene", "-g", type=str, default="../../1236_pruned_gene_trees.tsv.rooted",
+                        help="Path to gene trees file (default: ../../1236_pruned_gene_trees.tsv.rooted)")
     parser.add_argument("--threads", "-t", type=int, default=50,
                         help="Number of threads to use for parallelization (default: 50)")
     parser.add_argument("--bin", "-b", type=str,

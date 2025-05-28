@@ -407,10 +407,10 @@ def calculate_genome_Typicality(genome_path, gene_positions, template_size, tmp_
 if __name__ == '__main__':
     # parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--gene-positions", "-g", type=str, required=False, default="/root/work/projects/hgt_inference_comparative_study/data/1236_gene_features.tsv",
-                        help="(str) Path to gene positions TSV file, with column headers: locus_tag, gene_id, start, end, strand, seqid, genome_accession, taxon_id. Default: /root/work/projects/hgt_inference_comparative_study/data/1236_gene_features.tsv")
-    parser.add_argument("--genome-paths", "-p", type=str, required=False, default="/root/work/projects/hgt_inference_comparative_study/data/1236_genome_fna_filepaths.tsv",
-                        help="(str) Path to genome paths TSV file, with columns: genome_accession, genome_path. Default: /root/work/projects/hgt_inference_comparative_study/data/1236_genome_fna_filepaths.tsv")
+    parser.add_argument("--gene-positions", "-g", type=str, required=False, default="/root/work/projects/paper_comparative_study_of_hgt_inference_methods/data/1236_gene_features.tsv",
+                        help="(str) Path to gene positions TSV file, with column headers: locus_tag, gene_id, start, end, strand, seqid, genome_accession, taxon_id. Default: /root/work/projects/paper_comparative_study_of_hgt_inference_methods/data/1236_gene_features.tsv")
+    parser.add_argument("--genome-paths", "-p", type=str, required=False, default="/root/work/projects/paper_comparative_study_of_hgt_inference_methods/data/1236_genome_fna_filepaths.tsv",
+                        help="(str) Path to genome paths TSV file, with columns: genome_accession, genome_path. Default: /root/work/projects/paper_comparative_study_of_hgt_inference_methods/data/1236_genome_fna_filepaths.tsv")
     parser.add_argument("--output-dir", "-o", type=str, required=False, default="Results/",
                         help="(str) Path to output directory. Default: Results/")
     parser.add_argument("--threads", "-t", type=int, default=100,

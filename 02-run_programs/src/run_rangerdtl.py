@@ -87,10 +87,10 @@ if __name__ == '__main__':
     # import argparse and read in the arguments
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--speciestree", "-s", help="Path to the species tree (default: ../../data/1236_wol_tree_pruned_with_internal_labels.nwk)",
-                        type=str, default="../../data/1236_wol_tree_pruned_with_internal_labels.nwk")
-    parser.add_argument("--genetrees", "-g", help="Path to the gene trees (default: ../../data/1236_pruned_gene_trees.tsv.rooted.underscored)", type=str,
-                        default="../../data/1236_pruned_gene_trees.tsv.rooted.underscored")
+    parser.add_argument("--speciestree", "-s", help="Path to the species tree (default: ../../1236_wol_tree_pruned_with_internal_labels.nwk)",
+                        type=str, default="../../1236_wol_tree_pruned_with_internal_labels.nwk")
+    parser.add_argument("--genetrees", "-g", help="Path to the gene trees (default: ../../1236_pruned_gene_trees.tsv.rooted.underscored)", type=str,
+                        default="../../1236_pruned_gene_trees.tsv.rooted.underscored")
     parser.add_argument("--threads", "-t",
                         help="Number of threads to use (default: 50)", type=int, default=50)
     parser.add_argument("--bin", "-b", help="Path to the Ranger bin directory (default: /root/bin/RANGERDTL_LINUX/)",

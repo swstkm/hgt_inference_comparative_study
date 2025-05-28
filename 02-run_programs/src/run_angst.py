@@ -7,6 +7,7 @@ import logging
 import shutil
 from datetime import timedelta
 from ete3 import Tree
+import traceback
 
 # Create or get the logger
 logger = logging.getLogger(__name__)
@@ -56,10 +57,28 @@ def run_ANGST_on_NOG(pool_args):
     # Run AnGST
     try:
         logger.info("Running AnGST for NOG_ID {}".format(nog_id))
+        logger.info("Command: python2 {} {}".format(
+            angst_script, input_path))
+        # make sure python2 is available
+        py2_available = False
+        for path in os.environ["PATH"].split(os.pathsep):
+            full_path = os.path.join(path, "python2")
+            if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                py2_available = True
+                break
+        if not py2_available:
+            logger.error("python2 is not available in PATH")
+            raise EnvironmentError("python2 is not available in PATH. Make sure you are in the correct conda environment.")
+                
         subprocess.check_call(["python2", angst_script, input_path])
     except subprocess.CalledProcessError as e:
         logger.error(
             "AnGST failed for NOG_ID {} with error\n {}".format(nog_id, e))
+        return None
+    except Exception as e:
+        logger.error(
+            "AnGST failed for NOG_ID {} with error\n {}".format(nog_id, e))
+        logger.error(traceback.format_exc())
         return None
 
     return nog_id
@@ -93,10 +112,10 @@ if __name__ == '__main__':
     # use argparse for reading in the number of threads and the input trees file
     parser = argparse.ArgumentParser(
         description="Run AnGST on a set of gene trees")
-    parser.add_argument("--species", "-s", type=str, default="../../data/1236_wol_tree_pruned_angst.nwk",
-                        help="Path to species tree file (default: ../../data/1236_wol_tree_pruned_angst.nwk)")
-    parser.add_argument("--gene", "-g", type=str, default="../../data/1236_pruned_gene_trees.tsv",
-                        help="Path to gene trees file (default: ../../data/1236_pruned_gene_trees.tsv)")
+    parser.add_argument("--species", "-s", type=str, default="../../1236_wol_tree_pruned_angst.nwk",
+                        help="Path to species tree file (default: ../../1236_wol_tree_pruned_angst.nwk)")
+    parser.add_argument("--gene", "-g", type=str, default="../../1236_pruned_gene_trees.tsv",
+                        help="Path to gene trees file (default: ../../1236_pruned_gene_trees.tsv)")
     parser.add_argument("--threads", "-t", type=int, default=50,
                         help="Number of threads to use for parallelization (default: 50)")
     parser.add_argument("--output", "-o", type=str, default="./Results",

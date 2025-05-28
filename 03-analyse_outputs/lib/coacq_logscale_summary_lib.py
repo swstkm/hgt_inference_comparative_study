@@ -3,6 +3,12 @@ import pandas as pd
 import numpy as np
 from IPython.display import display
 import multiprocessing as mp
+import math
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FixedLocator
+
+from adjustText import adjust_text
+
 
 """
 This module contains functions to load and summarize coacquisition data, at log scale intervals.
@@ -12,7 +18,24 @@ This module contains functions to load and summarize coacquisition data, at log 
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-def load_data(res_dir):
+def is_float(value: str) -> bool:
+    """
+    Check if a string value can be converted to a float.
+    Arguments:
+    value (str): The string value to check.
+    Returns:
+    bool: True if the value can be converted to a float, False otherwise.
+    """
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
+def load_data(res_dir,
+              include_manual_thresholds=False
+                ):
     """
     Load chromosome location data and coacquisition data from specified directories.
 
@@ -34,29 +57,33 @@ def load_data(res_dir):
     """
     coacquisitions_dfs = {
         # key is method name: everything after "coacquisitions." and before ".tsv"
-        f.partition("coacquisitions.")[2].rpartition(".tsv")[0]: pd.read_csv(
-            f"{res_dir}/{f}",
+        os.path.relpath(os.path.join(root, f), res_dir)
+        .partition("coacquisitions.")[2]
+        .rpartition(".tsv")[0]: pd.read_csv(
+            os.path.join(root, f),
             sep="\t",
             dtype={
-                "recipient_branch": str,
-                "nog1": str,
-                "nog2": str,
-                "gene1": str,
-                "gene2": str,
-                "pair_distances": float,
-                "pair_distances_string": str,
-                "source_overlap": str,
-                "cotransfers": float,
-                "num_genes_between": float,
-                "contig:genome_size": str,
-                "nog1_transfers": float,
-                "nog2_transfers": float,
-                "notes": str,
+            "recipient_branch": str,
+            "nog1": str,
+            "nog2": str,
+            "gene1": str,
+            "gene2": str,
+            "pair_distances": float,
+            "pair_distances_string": str,
+            "source_overlap": str,
+            "cotransfers": float,
+            "num_genes_between": float,
+            "contig:genome_size": str,
+            "nog1_transfers": float,
+            "nog2_transfers": float,
+            "notes": str,
             },
             na_values=["NA", "nan"],
         )
-        for f in os.listdir(res_dir)
-        if f.startswith("coacquisitions.") and f.endswith(".tsv")
+        for root, _, files in os.walk(res_dir)
+        for f in files
+        if (f.startswith("coacquisitions.") and f.endswith(".tsv"))
+        and (include_manual_thresholds or not is_float(f.split(".")[-2]))
     }
     # print all the methods (keys) for which coacquisitions data is in this coacquisitions_dfs dictionary
     print("The following methods are included in the coacquisitions data:")
@@ -236,6 +263,7 @@ def calculate_neighbors(coaq_positions_available_df, cutoff, method, coacq_thres
 
 def replace_zeros_with_nan(df):
     # replace zeros with NaNs for columns that should not have zeros
+    print(f"Methods in the dataframe: {df['method'].unique()}")
     for method in df["method"].unique():
         for column in df.columns:
             if column in ["method", "threshold"]:
@@ -297,7 +325,7 @@ def summarize_coacquisitions(
             # we do this because we want to summarize the coacquisitions at log scale intervals
             N = 1
             coacq_thresholds = []
-            log_multiples = [1, 2, 5, 10]
+            log_multiples = [1, 2, 4, 6, 8, 10]
             while True:
                 for i, multiple in enumerate(log_multiples):
                     if multiple * 10**N >= min_coacq and multiple * 10**N <= max_coacq:
@@ -550,6 +578,10 @@ def summarize_coacquisitions_manual_thresholds(
         method_prefix = f"{method}." if not method.endswith(".") else method
         threshold_value = threshold_label.replace(method_prefix, "")
 
+        if not is_float(threshold_value):
+            print(f"Skipping non-numeric threshold value: {threshold_value}")
+            continue
+
         # keep only the coacquisitions with known pair distances
         cq_df = cq_df[cq_df["notes"] == "gene_positions_are_available"]
         if cq_df.shape[0] < min_coacquisitions:
@@ -610,6 +642,146 @@ def combine_coacquisitions_summary_records(coacquisitions_summary_records_list: 
 
     # return the combined summary records for all methods across all thresholds
     return coacquisitions_summary_df
+
+
+# Function to determine the unit scale length for inset axes
+def determine_power_of_ten(lims):
+    power_of_tens = []
+    for lim in lims:
+        lower, upper = lim
+        difference = upper - lower
+        exponent = int(math.floor(math.log10(difference)))
+        power_of_ten = 10 ** (exponent)
+        power_of_tens.append(power_of_ten)
+    return power_of_tens
+
+
+def plot_multiple_figs_with_insets(
+    fig,
+    axes,
+    data_dict,
+    x_col,
+    y_col,
+    marker_styles_dict,
+    xlims,
+    ylims,
+    xlabel,
+    ylabel,
+    insets,
+):
+    min_numerator = 0  # if 0, then in paper we add notes about the fact that there may be small number effects
+
+    # sort the data_dict by method name in reverse order
+    data_dict = dict(sorted(data_dict.items(), key=lambda x: x[0]))
+
+    for i, (name, data_df) in enumerate(data_dict.items()):
+        ax = axes[i]
+        if insets[i] is not None:
+            axins = ax.inset_axes(insets[i])
+        else:
+            axins = None
+
+        # sort the data_df by method and x_col
+        data_df = data_df.sort_values(by=["method", x_col], ascending=[False, True])
+
+        # loop over methods, and plot the data
+        for method in data_df["method"].unique():
+            method_df = data_df[data_df["method"] == method]
+            # check if all values in method_df[y_col] are NaN or zero, if yes then skip plotting
+            if method_df[y_col].isnull().all() or (method_df[y_col] == 0).all():
+                continue
+            # some of the percentage values are very low, so we filter out the rows where the absolute value of the numerator is < min_numerator
+            method_df = method_df[
+                method_df[x_col] * method_df[y_col] / 100 > min_numerator
+            ]
+            # plot the data
+            ax.plot(
+                method_df[x_col],
+                method_df[y_col],
+                # marker styles from marker_styles_dict
+                marker=marker_styles_dict[method]["marker_pyplot"],
+                color=marker_styles_dict[method]["marker_color"],
+                markerfacecolor=marker_styles_dict[method]["face_color"],
+            )
+            # now plot the same data in the inset
+            if axins is not None:
+                axins.plot(
+                    method_df[x_col],
+                    method_df[y_col],  # type: ignore
+                    marker=marker_styles_dict[method]["marker_pyplot"],
+                    color=marker_styles_dict[method]["marker_color"],
+                    markerfacecolor=marker_styles_dict[method]["face_color"],
+                )
+
+        if insets[i] is None:
+            continue
+        elif insets[i] is not None:
+            # set labels and scales for inset
+            xlim = xlims[i]
+            ylim = ylims[i]
+            axins.set_xlim(xlim)  # type: ignore
+            axins.set_ylim(ylim)  # type: ignore
+            # for inset, we want only the major ticks and in smaller font
+            axins.tick_params(axis="both", which="major", labelsize=15)  # type: ignore
+            axins.tick_params(axis="both", which="minor", labelsize=15)  # type: ignore
+            axins.xaxis.set_major_locator(FixedLocator([xlim[0], xlim[1]]))  # type: ignore
+            axins.yaxis.set_major_locator(FixedLocator([ylim[0], ylim[1]]))  # type: ignore
+            axins.yaxis.set_minor_locator(FixedLocator([ylim[0], ylim[1]]))  # type: ignore
+            axins.xaxis.set_minor_locator(FixedLocator([xlim[0], xlim[1]]))  # type: ignore
+            # find unit scales for x and y axes ofinset
+            x_power_of_ten, y_power_of_ten = determine_power_of_ten([xlim, ylim])
+            # modify the labels to be in powers of 10
+            if x_power_of_ten > 10:
+                axins.set_xticklabels(  # type: ignore
+                    [
+                        f"{x/x_power_of_ten:.1f}x$10^{int(np.log10(x_power_of_ten))}$"
+                        for x in [xlim[0], xlim[1]]
+                    ]
+                )
+            if y_power_of_ten > 10:
+                axins.set_yticklabels(  # type: ignore
+                    [
+                        f"{y/y_power_of_ten:.1f}x$10^{int(np.log10(y_power_of_ten))}$"
+                        for y in [ylim[0], ylim[1]]
+                    ]
+                )
+
+            axins.grid(False)  # type: ignore
+            ax.indicate_inset_zoom(axins)
+
+        # Tufte style
+        # remove the top and right spines
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        # set the bottom and left spines to be thicker
+        ax.spines["bottom"].set_linewidth(1.5)
+        ax.spines["left"].set_linewidth(1.5)
+        # set the ticks to be thicker
+        ax.tick_params(axis="both", which="major", width=1.5)
+        ax.tick_params(axis="both", which="minor", width=1.5)
+        # set the spine bounds to be the same as the data limits
+        filtered_data_df = data_df[
+            (data_df[x_col] * data_df[y_col] / 100 > min_numerator)
+            & (data_df[y_col] > 0)
+        ]
+        x_data_lims = filtered_data_df[x_col].min(), filtered_data_df[x_col].max()
+        y_data_lims = filtered_data_df[y_col].min(), filtered_data_df[y_col].max()
+        ax.spines["left"].set_bounds(y_data_lims[0], y_data_lims[1])
+        ax.spines["bottom"].set_bounds(x_data_lims[0], x_data_lims[1])
+
+        # let axes breathe by moving the spines away from the data
+        ax.spines["left"].set_position(("outward", 10))
+        ax.spines["bottom"].set_position(("outward", 10))
+
+        # add margins
+        ax.margins(x=0.05, y=0.05)
+        # set labels and scales
+        ax.set_xlabel(f"{xlabel} ({name})")
+        ax.set_ylabel(ylabel)
+        ax.set_xscale("log")
+        ax.grid(False)
+
+    return fig, axes
 
 
 ###############################################################################################

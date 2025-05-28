@@ -14,7 +14,7 @@ The project is organized into three main steps (`01`, `02`, `03`), each containi
   - Downloaded files
   - Processed results
   - Generated figures
-- Alternatively, a complete dataset including results and figures can be downloaded from the [Zenodo link](https://zenodo.org/records/14555036) in the paper.
+- Alternatively, a complete dataset including results and figures can be downloaded from the [Zenodo link](https://doi.org/10.5281/zenodo.15535009).
 
 ## Required python packages
 
